@@ -1,0 +1,77 @@
+<html>
+<head>
+    <title>Jvm Monitor</title>
+    <script src="sockjs-0.3.4.js"></script>
+    <script src="stomp.js"></script>
+     <script src="//www.chartjs.org/assets/Chart.min.js"></script>
+   
+    <script type="text/javascript">
+        var stompClient = null;
+
+        var currentdate = new Date(); 
+        var datetime = currentdate.getDate() + "/"
+                        + (currentdate.getMonth()+1)  + "/" 
+                        + currentdate.getFullYear() + " "  
+                        + currentdate.getHours() + ":"  
+                        + currentdate.getMinutes() + ":" 
+                        + currentdate.getSeconds();
+        
+        function connect() {
+        	var canvas = document.getElementById('updating-chart'),
+		    ctx = canvas.getContext('2d'),
+		    startingData = {
+		      labels: [datetime, datetime],
+		      datasets: [
+		          {
+		              fillColor: "rgba(220,220,220,0.2)",
+		              strokeColor: "rgba(220,220,220,1)",
+		              pointColor: "rgba(220,220,220,1)",
+		              pointStrokeColor: "#fff",
+		              data: [0, 0]
+		          }
+		      ]
+		    },
+		    latestLabel = startingData.labels[6];
+		
+		// Reduce the animation steps for demo clarity.
+		var myLiveChart = new Chart(ctx).Line(startingData, {animationSteps: 15});
+            var socket = new SockJS('/SpringWebSocket/jvm');
+            stompClient = Stomp.over(socket);
+            stompClient.connect({}, function(frame) {
+                console.log('Connected: ' + frame);
+                stompClient.subscribe('/topic/HeapMemoryUsage', function(jvmValue){
+                	
+                	var div = Math.floor(JSON.parse(jvmValue.body).value/1000000);
+                	
+                	 var currentdate = new Date(); 
+                     var datetime = currentdate.getDate() + "/"
+                                     + (currentdate.getMonth()+1)  + "/" 
+                                     + currentdate.getFullYear() + " "  
+                                     + currentdate.getHours() + ":"  
+                                     + currentdate.getMinutes() + ":" 
+                                     + currentdate.getSeconds();
+                                     
+                	// Add two random numbers for each dataset
+          		  	myLiveChart.addData([div], datetime);
+          		  	
+          		  	console.log('Lenght: ' + myLiveChart.datasets[0].points.length);
+                	
+                	// Remove the first point so we dont just add values forever
+                	if (myLiveChart.datasets[0].points.length>6)
+          		  		myLiveChart.removeData();
+                	
+                });
+            });
+        }
+
+    </script>
+</head>
+<body onload="connect()">
+<div>
+	
+    <div>
+    	<canvas id="updating-chart" width="500" height="300"></canvas>
+    </div>
+</div>
+</body>
+</html>
